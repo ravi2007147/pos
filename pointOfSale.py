@@ -1,7 +1,14 @@
-import sys
+import sys 
 from PyQt5.QtWidgets import(QApplication, QFrame,QLabel, QWidget, QMainWindow, QVBoxLayout, QHBoxLayout,
     QPushButton,QLineEdit)
+from PyQt5.QtWidgets import (
+    QWidget, QLabel, QLineEdit, QTextEdit, QComboBox, QSpinBox, QDoubleSpinBox,
+    QPushButton, QVBoxLayout, QHBoxLayout, QGridLayout, QFileDialog, QMessageBox
+)
 from PyQt5.QtCore import Qt
+import datetime
+
+from posdatabase import database
 
 
 class pos_system(QMainWindow):
@@ -9,7 +16,8 @@ class pos_system(QMainWindow):
         super().__init__()
         self.setWindowTitle("POS System")
         self.showMaximized()  
-
+        self.db = database()
+        self.db.initialize_db()
         widget = QWidget()
         dashboard_layout = QHBoxLayout()
         widget.setLayout(dashboard_layout)
@@ -42,6 +50,7 @@ class pos_system(QMainWindow):
         sidebar_layout.addWidget(Button2)
 
         Button3 = QPushButton("Sales report")
+        Button3.clicked.connect(self.open_sales_report)
         Button3.setFixedHeight(40)
         sidebar_layout.addWidget(Button3)
 
@@ -102,6 +111,10 @@ class pos_system(QMainWindow):
     def open_point_of_sale(self):
         self.pos_window = PointOfSaleWindow()
         self.pos_window.show()
+
+    def open_sales_report(self):
+        self.sales_report_window = SalesReportWindow()
+        self.sales_report_window.show()
 
 
 
@@ -191,25 +204,127 @@ class SalesReportWindow(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Sales Report")
-        self.resize(800, 600)
-
-        layout = QVBoxLayout()
-        self.setLayout(layout)
+        self.resize(1000, 600)
 
         
+        main_layout = QHBoxLayout()
+        self.setLayout(main_layout)
+
+        sidebar = QFrame()
+        sidebar.setFixedWidth(200)
+        sidebar.setStyleSheet("background-color: #f0f0f0;")
+        sidebar_layout = QVBoxLayout()
+        sidebar.setLayout(sidebar_layout)
+
+        label = QLabel("Sales Report")
+        label.setStyleSheet("font-weight: bold; font-size: 16px;")
+        label.setAlignment(Qt.AlignCenter)
+        sidebar_layout.addWidget(label)
+
+        report_btn = QPushButton("Sale Report")
+        summary_btn = QPushButton("Sales Summary")
+        report_btn.setFixedHeight(40)
+        summary_btn.setFixedHeight(40)
+
+        sidebar_layout.addWidget(report_btn)
+        sidebar_layout.addWidget(summary_btn)
+        sidebar_layout.addStretch()
+
+        main_layout.addWidget(sidebar)
+
+        content = QFrame()
+        content_layout = QVBoxLayout()
+        content.setLayout(content_layout)
+
         title = QLabel("Sales Report")
-        title.setStyleSheet("font-size: 20px; font-weight: bold;")
         title.setAlignment(Qt.AlignCenter)
-        layout.addWidget(title)
+        title.setStyleSheet("font-size: 20px; font-weight: bold;")
+        content_layout.addWidget(title)
 
+        date_layout = QHBoxLayout()
+        date_label = QLabel("Date Range:")
+        from_input = QLineEdit()
+        from_input.setPlaceholderText("From")
+        from_input.setFixedWidth(100)
+
+        to_input = QLineEdit()
+        to_input.setPlaceholderText("To")
+        to_input.setFixedWidth(100)
+
+        date_layout.addWidget(date_label)
+        date_layout.addSpacing(10)
+        date_layout.addWidget(from_input)
+        date_layout.addSpacing(10)
+        date_layout.addWidget(to_input)
+        date_layout.addStretch()
+
+        content_layout.addLayout(date_layout)
+
+        # Chart & Summary Placeholder
+        chart_box = QLabel("\n\n[ Sales Chart Will Be Shown Here ]\n")
+        chart_box.setStyleSheet("border: 1px solid gray; color: gray;")
+        chart_box.setAlignment(Qt.AlignCenter)
+        chart_box.setFixedHeight(300)
+        content_layout.addWidget(chart_box)
+
+        summary = QLabel("[ Report Summary / Notes ]")
+        summary.setStyleSheet("color: gray;")
+        summary.setAlignment(Qt.AlignLeft)
+        content_layout.addWidget(summary)
+
+        main_layout.addWidget(content, stretch=1)
         
-      
-
-
-
-
-
         
+class AddProductForm(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Add Product")
+        self.setGeometry(200, 200, 500, 500)
+        
+        layout = QVBoxLayout()
+        form_layout = QGridLayout()
+        
+        name = self.name_input = QLineEdit()
+        
+        sku = self.sku_input = QLineEdit()
+        
+        unit= self.unit_input = QLineEdit()
+        
+        price= self.price_input = QDoubleSpinBox()
+        self.price_input.setMaximum(1000000)
+        
+        self.cost_price_input = QDoubleSpinBox()
+        self.cost_price_input.setMaximum(1000000)
+    
+
+        self.reorder_input = QSpinBox()
+        self.reorder_input.setMaximum(10000)
+        
+        self.is_active_input = QComboBox()
+        self.is_active_input.addItems(["Yes", "No"])
+        
+        layout.addLayout(form_layout)
+        
+        self.submit_btn = QPushButton("Add Product")
+        self.submit_btn.clicked.connect(self.save_product)
+        layout.addWidget(self.submit_btn)
+        
+    def save_product(self):
+        # Get data
+        name = self.name_input.text()
+        sku = self.sku_input.text()
+        category_id = self.category_input.currentData()
+        unit = self.unit_input.text()
+        price = self.price_input.value()
+        cost_price = self.cost_price_input.value()
+        tax_rate = self.tax_input.value()
+        reorder_level = self.reorder_input.value()
+        is_active = 1 if self.is_active_input.currentText() == "Yes" else 0
+        image_url = self.image_url_input.text()
+        description = self.description_input.toPlainText()
+
+
+
         
         
 if __name__ == "__main__":
