@@ -39,8 +39,27 @@ class database():
                 FOREIGN KEY (category_id) REFERENCES category(category_id)
             )
         """)
-
         
+        c.execute(""" 
+            CREATE TABLE IF NOT EXISTS category_mapping (
+                product_id INTEGER,
+                category_id INTEGER
+            )
+        """)
+
+    
         conn.commit()
         conn.close()
+        
+    def save_product(self, product_data):
+        conn = self.get_connection()
+        c = conn.cursor()
+        c.execute("""
+            INSERT INTO product 
+            (name, sku, category_id, unit, price, cost_price, tax_rate, reorder_level, is_active, description)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, product_data)
+        conn.commit()
+        conn.close()
+    
     

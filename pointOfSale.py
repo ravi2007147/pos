@@ -149,6 +149,7 @@ class ProductListWindow(QWidget):
 
         
         add_button = QPushButton("Add Product")
+        add_button.clicked.connect(self.open_add_product)
         add_button.setFixedWidth(120)
         main_layout.addWidget(add_button, alignment=Qt.AlignRight)
 
@@ -161,6 +162,10 @@ class ProductListWindow(QWidget):
     def search_products(self):
         search_text = self.search_input.text()
         self.table_placeholder.setText(f"Searching for: {search_text}")
+        
+    def open_add_product(self):
+        self.add_product_window = AddProductForm()
+        self.add_product_window.show()
 
 class PointOfSaleWindow(QWidget):
     def __init__(self):
@@ -273,44 +278,142 @@ class SalesReportWindow(QWidget):
         content_layout.addWidget(summary)
 
         main_layout.addWidget(content, stretch=1)
-        
+        j
         
 class AddProductForm(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Add Product")
         self.setGeometry(200, 200, 500, 500)
-        
+
         layout = QVBoxLayout()
         form_layout = QGridLayout()
+
         
-        name = self.name_input = QLineEdit()
+        self.name_input = QLineEdit()
+        self.sku_input = QLineEdit()
+        self.category_input = QComboBox() 
+        self.category_input.addItem("silk")
+        self.category_input.addItem("cotton")
+        self.category_input.addItem("synthetic")
+        self.category_input.addItem("original")
+        self.category_input.addItem("replica")
+        self.category_input.addItem("Men")
+        self.category_input.addItem("Women")
+        self.category_input.addItem("kid")
         
-        sku = self.sku_input = QLineEdit()
         
-        unit= self.unit_input = QLineEdit()
-        
-        price= self.price_input = QDoubleSpinBox()
+
+        self.unit_input = QLineEdit()
+        self.price_input = QDoubleSpinBox()
         self.price_input.setMaximum(1000000)
-        
+
         self.cost_price_input = QDoubleSpinBox()
         self.cost_price_input.setMaximum(1000000)
-    
+
+        self.tax_input = QDoubleSpinBox()
+        self.tax_input.setSuffix(" %")
+        self.tax_input.setMaximum(100)
 
         self.reorder_input = QSpinBox()
         self.reorder_input.setMaximum(10000)
-        
+
         self.is_active_input = QComboBox()
         self.is_active_input.addItems(["Yes", "No"])
+
+       
+
+        self.description_input = QTextEdit()
+
         
+        form_layout.addWidget(QLabel("Name"), 0, 0)
+        form_layout.addWidget(self.name_input, 0, 1)
+
+        form_layout.addWidget(QLabel("SKU"), 1, 0)
+        form_layout.addWidget(self.sku_input, 1, 1)
+
+        form_layout.addWidget(QLabel("Category"), 2, 0)
+        form_layout.addWidget(self.category_input, 2, 1)
+
+        form_layout.addWidget(QLabel("Unit"), 3, 0)
+        form_layout.addWidget(self.unit_input, 3, 1)
+
+        form_layout.addWidget(QLabel("Price"), 4, 0)
+        form_layout.addWidget(self.price_input, 4, 1)
+
+        form_layout.addWidget(QLabel("Cost Price"), 5, 0)
+        form_layout.addWidget(self.cost_price_input, 5, 1)
+
+        form_layout.addWidget(QLabel("Tax Rate"), 6, 0)
+        form_layout.addWidget(self.tax_input, 6, 1)
+
+        form_layout.addWidget(QLabel("Reorder Level"), 7, 0)
+        form_layout.addWidget(self.reorder_input, 7, 1)
+
+        form_layout.addWidget(QLabel("Is Active"), 8, 0)
+        form_layout.addWidget(self.is_active_input, 8, 1)
+
+        # form_layout.addWidget(QLabel("Image"), 9, 0)
+        # form_layout.addWidget(self.image_url_input, 9, 1)
+        # form_layout.addWidget(self.browse_button, 9, 2)
+
+        form_layout.addWidget(QLabel("Description"), 10, 0)
+        form_layout.addWidget(self.description_input, 10, 1, 2, 2)
+
         layout.addLayout(form_layout)
+
         
         self.submit_btn = QPushButton("Add Product")
         self.submit_btn.clicked.connect(self.save_product)
         layout.addWidget(self.submit_btn)
+
+        self.setLayout(layout)
         
+        
+    def validate_fields(self):
+        if not self.name_input.text().strip():
+            QMessageBox.warning(self, "Validation Error", "Name is required.")
+            return False
+
+        if not self.sku_input.text().strip():
+            QMessageBox.warning(self, "Validation Error", "SKU is required.")
+            return False
+
+        if self.category_input.currentText().strip() == "":
+            QMessageBox.warning(self, "Validation Error", "Category must be selected.")
+            return False
+
+        if not self.unit_input.text().strip():
+            QMessageBox.warning(self, "Validation Error", "Unit is required.")
+            return False
+
+        if self.price_input.value() == 0:
+            QMessageBox.warning(self, "Validation Error", "Price must be greater than 0.")
+            return False
+
+        if self.cost_price_input.value() == 0:
+            QMessageBox.warning(self, "Validation Error", "Cost Price must be greater than 0.")
+            return False
+
+        if self.tax_input.value() == 0:
+            QMessageBox.warning(self, "Validation Error", "Tax Rate must be greater than 0.")
+            return False
+
+        if self.reorder_input.value() == 0:
+            QMessageBox.warning(self, "Validation Error", "Reorder Level must be greater than 0.")
+            return False
+
+        if not self.description_input.toPlainText().strip():
+            QMessageBox.warning(self, "Validation Error", "Description is required.")
+            return False
+
+        return True
+        
+
+
     def save_product(self):
-        # Get data
+        if not self.validate_fields():
+            return  
         name = self.name_input.text()
         sku = self.sku_input.text()
         category_id = self.category_input.currentData()
@@ -320,11 +423,17 @@ class AddProductForm(QWidget):
         tax_rate = self.tax_input.value()
         reorder_level = self.reorder_input.value()
         is_active = 1 if self.is_active_input.currentText() == "Yes" else 0
-        image_url = self.image_url_input.text()
         description = self.description_input.toPlainText()
 
+        
+        QMessageBox.information(self, "Product Info", f"Saved: {name}, Price: {price}, Tax: {tax_rate}%")
 
 
+        db = database()
+        db.save_product((name, sku, category_id, unit, price, cost_price, tax_rate, reorder_level, is_active, description))
+
+        QMessageBox.information(self, "Success", "Product saved successfully!")
+        self.close()
         
         
 if __name__ == "__main__":
