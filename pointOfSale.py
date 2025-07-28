@@ -7,6 +7,7 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtCore import Qt
 import datetime
+from PyQt5.QtWidgets import QTableWidget, QTableWidgetItem
 
 from posdatabase import database
 
@@ -79,6 +80,7 @@ class pos_system(QMainWindow):
         top_row.addSpacing(40)
 
         inventory_box = QPushButton("Inventory")
+        inventory_box.clicked.connect(self.open_inventory)
         inventory_box.setFixedSize(200, 100)
         top_row.addWidget(inventory_box)
 
@@ -116,6 +118,9 @@ class pos_system(QMainWindow):
         self.sales_report_window = SalesReportWindow()
         self.sales_report_window.show()
 
+    def open_inventory(self):
+        self.inventory_window = InventoryWindow()
+        self.inventory_window.show()
 
 
 class ProductListWindow(QWidget):
@@ -278,7 +283,38 @@ class SalesReportWindow(QWidget):
         content_layout.addWidget(summary)
 
         main_layout.addWidget(content, stretch=1)
-        j
+        
+class InventoryWindow(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Inventory")
+        self.resize(600, 400)
+        
+        layout = QVBoxLayout()
+        self.setLayout(layout)
+        
+        title = QLabel("Inventory List")
+        title.setAlignment(Qt.AlignCenter)
+        title.setStyleSheet("font-size: 20px; font-weight: bold;")
+        layout.addWidget(title)
+        
+        self.table = QTableWidget()
+        self.table.setColumnCount(4)
+        self.table.setHorizontalHeaderLabels(["Product ID", "Name", "Quantity", "Price"])
+        layout.addWidget(self.table)
+        
+        self.load_inventory()
+         
+    def load_inventory(self):
+        db = database()
+        products = db.get_inventory()
+
+        self.table.setRowCount(len(products))
+        for row_idx, (product_id, name, qty, price) in enumerate(products):
+            self.table.setItem(row_idx, 0, QTableWidgetItem(str(product_id)))
+            self.table.setItem(row_idx, 1, QTableWidgetItem(name))
+            self.table.setItem(row_idx, 2, QTableWidgetItem(str(qty)))
+            self.table.setItem(row_idx, 3, QTableWidgetItem(f"{price:.2f}"))
         
 class AddProductForm(QWidget):
     def __init__(self, parent=None):
@@ -430,7 +466,7 @@ class AddProductForm(QWidget):
 
 
         db = database()
-        db.save_product((name, sku, category_id, unit, price, cost_price, tax_rate, reorder_level, is_active, description))
+        db.save_product((name, sku, unit, price, cost_price, tax_rate, reorder_level, is_active, description))
 
         QMessageBox.information(self, "Success", "Product saved successfully!")
         self.close()

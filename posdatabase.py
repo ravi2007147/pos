@@ -25,7 +25,6 @@ class database():
                 product_id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL,
                 sku TEXT,
-                category_id INTEGER,
                 unit TEXT,
                 price REAL,
                 cost_price REAL,
@@ -56,10 +55,22 @@ class database():
         c = conn.cursor()
         c.execute("""
             INSERT INTO product 
-            (name, sku, category_id, unit, price, cost_price, tax_rate, reorder_level, is_active, description)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (name, sku, unit, price, cost_price, tax_rate, reorder_level, is_active, description)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, product_data)
         conn.commit()
         conn.close()
+        
+        
+    def get_inventory(self):
+        conn = self.get_connection()
+        c = conn.cursor()
+        c.execute("""
+            SELECT product_id, name, reorder_level, price FROM product
+        """)
+        rows = c.fetchall()
+        conn.close()
+        return rows
+
     
     
