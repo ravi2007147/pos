@@ -3,7 +3,7 @@ from PyQt5.QtWidgets import(QApplication, QFrame,QLabel, QWidget, QMainWindow, Q
     QPushButton,QLineEdit)
 from PyQt5.QtWidgets import (
     QWidget, QLabel, QLineEdit, QTextEdit, QComboBox, QSpinBox, QDoubleSpinBox,
-    QPushButton, QVBoxLayout, QHBoxLayout, QGridLayout, QFileDialog, QMessageBox
+    QPushButton, QVBoxLayout, QHBoxLayout, QGridLayout, QFileDialog, QMessageBox,QHeaderView
 )
 from PyQt5.QtCore import Qt
 import datetime
@@ -86,7 +86,6 @@ class pos_system(QMainWindow):
 
         top_row.addStretch()
         main_layout.addLayout(top_row)
-
 
         bottom_row = QHBoxLayout()
         bottom_row.addStretch()
@@ -298,23 +297,51 @@ class InventoryWindow(QWidget):
         title.setStyleSheet("font-size: 20px; font-weight: bold;")
         layout.addWidget(title)
         
+        search_layout = QHBoxLayout()
+        self.search_input = QLineEdit()
+        self.search_input.setPlaceholderText("Search product by name...")
+        self.search_input.textChanged.connect(self.search_inventory)
+
+        search_layout.addWidget(QLabel("Search:"))
+        search_layout.addWidget(self.search_input)
+
+        layout.addLayout(search_layout)
+
+        
         self.table = QTableWidget()
         self.table.setColumnCount(4)
         self.table.setHorizontalHeaderLabels(["Product ID", "Name", "Quantity", "Price"])
-        layout.addWidget(self.table)
+        self.table.horizontalHeader().setStretchLastSection(True)
+        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        layout.addWidget(self.table, stretch=1)
+
         
         self.load_inventory()
+    
+    def search_inventory(self):
+        query = self.search_input.text().lower()
+        filtered_products = [
+            product for product in self.all_products
+            if query in product[1].lower()
+        ]
+
+        self.display_inventory(filtered_products)
+
          
     def load_inventory(self):
         db = database()
-        products = db.get_inventory()
-
+        self.all_products = db.get_inventory() 
+        self.display_inventory(self.all_products)
+        
+    def display_inventory(self, products):
         self.table.setRowCount(len(products))
         for row_idx, (product_id, name, qty, price) in enumerate(products):
             self.table.setItem(row_idx, 0, QTableWidgetItem(str(product_id)))
             self.table.setItem(row_idx, 1, QTableWidgetItem(name))
             self.table.setItem(row_idx, 2, QTableWidgetItem(str(qty)))
             self.table.setItem(row_idx, 3, QTableWidgetItem(f"{price:.2f}"))
+
+
         
 class AddProductForm(QWidget):
     def __init__(self, parent=None):
