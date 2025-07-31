@@ -288,7 +288,6 @@ class InventoryWindow(QWidget):
         super().__init__()
         self.setWindowTitle("Inventory")
         self.resize(600, 400)
-        
         layout = QVBoxLayout()
         self.setLayout(layout)
         
@@ -301,7 +300,7 @@ class InventoryWindow(QWidget):
         self.search_input = QLineEdit()
         self.search_input.setPlaceholderText("Search product by name...")
         self.current_page = 1
-        self.items_per_page = 10
+        self.items_per_page = 5
 
         self.search_input.textChanged.connect(self.search_inventory)
 
@@ -319,6 +318,8 @@ class InventoryWindow(QWidget):
         layout.addWidget(self.table, stretch=1)
 
         pagination_layout = QHBoxLayout()
+        pagination_layout.addStretch()  
+
         self.prev_btn = QPushButton("Previous")
         self.next_btn = QPushButton("Next")
         self.page_label = QLabel("Page 1")
@@ -330,7 +331,9 @@ class InventoryWindow(QWidget):
         pagination_layout.addWidget(self.prev_btn)
         pagination_layout.addWidget(self.page_label)
         pagination_layout.addWidget(self.next_btn)
+
         layout.addLayout(pagination_layout)
+
 
         
         self.load_inventory()
