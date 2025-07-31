@@ -300,6 +300,9 @@ class InventoryWindow(QWidget):
         search_layout = QHBoxLayout()
         self.search_input = QLineEdit()
         self.search_input.setPlaceholderText("Search product by name...")
+        self.current_page = 1
+        self.items_per_page = 10
+
         self.search_input.textChanged.connect(self.search_inventory)
 
         search_layout.addWidget(QLabel("Search:"))
@@ -314,6 +317,20 @@ class InventoryWindow(QWidget):
         self.table.horizontalHeader().setStretchLastSection(True)
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         layout.addWidget(self.table, stretch=1)
+
+        pagination_layout = QHBoxLayout()
+        self.prev_btn = QPushButton("Previous")
+        self.next_btn = QPushButton("Next")
+        self.page_label = QLabel("Page 1")
+        self.page_label.setAlignment(Qt.AlignCenter)
+
+        self.prev_btn.clicked.connect(self.go_to_previous_page)
+        self.next_btn.clicked.connect(self.go_to_next_page)
+
+        pagination_layout.addWidget(self.prev_btn)
+        pagination_layout.addWidget(self.page_label)
+        pagination_layout.addWidget(self.next_btn)
+        layout.addLayout(pagination_layout)
 
         
         self.load_inventory()
@@ -334,12 +351,36 @@ class InventoryWindow(QWidget):
         self.display_inventory(self.all_products)
         
     def display_inventory(self, products):
-        self.table.setRowCount(len(products))
-        for row_idx, (product_id, name, qty, price) in enumerate(products):
+        self.filtered_products = products
+        total_items = len(products)
+        total_pages = max(1, (total_items + self.items_per_page - 1) // self.items_per_page)
+        self.current_page = min(max(1, self.current_page), total_pages)
+
+        start = (self.current_page - 1) * self.items_per_page
+        end = start + self.items_per_page
+        page_items = products[start:end]
+
+        self.table.setRowCount(len(page_items))
+        for row_idx, (product_id, name, qty, price) in enumerate(page_items):
             self.table.setItem(row_idx, 0, QTableWidgetItem(str(product_id)))
             self.table.setItem(row_idx, 1, QTableWidgetItem(name))
             self.table.setItem(row_idx, 2, QTableWidgetItem(str(qty)))
             self.table.setItem(row_idx, 3, QTableWidgetItem(f"{price:.2f}"))
+
+        self.page_label.setText(f"Page {self.current_page} of {total_pages}")
+        self.prev_btn.setEnabled(self.current_page > 1)
+        self.next_btn.setEnabled(self.current_page < total_pages)
+
+    def go_to_previous_page(self):
+        if self.current_page > 1:
+            self.current_page -= 1
+            self.display_inventory(self.filtered_products)
+
+    def go_to_next_page(self):
+        total_pages = (len(self.filtered_products) + self.items_per_page - 1) // self.items_per_page
+        if self.current_page < total_pages:
+            self.current_page += 1
+            self.display_inventory(self.filtered_products)
 
 
         
