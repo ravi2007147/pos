@@ -10,7 +10,7 @@ import datetime
 from PyQt5.QtWidgets import QTableWidget, QTableWidgetItem
 
 from posdatabase import database
-
+from PyQt5.QtWidgets import QMdiArea,QMdiSubWindow
 
 class pos_system(QMainWindow):
     def __init__(self):
@@ -20,9 +20,19 @@ class pos_system(QMainWindow):
         self.db = database()
         self.db.initialize_db()
         widget = QWidget()
-        dashboard_layout = QHBoxLayout()
-        widget.setLayout(dashboard_layout)
-        self.setCentralWidget(widget)
+        
+
+        main_widget = QWidget()
+        self.setCentralWidget(main_widget)
+
+        self.dashboard_layout = QHBoxLayout()
+        main_widget.setLayout(self.dashboard_layout)
+
+        self.mdi_area = QMdiArea()
+        self.mdi_area.setViewMode(QMdiArea.SubWindowView)
+        self.mdi_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.mdi_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+
 
         
         sidebar = QFrame()
@@ -46,7 +56,7 @@ class pos_system(QMainWindow):
         sidebar_layout.addWidget(Button1)
 
         Button2 = QPushButton("Point of sale")
-        Button2.clicked.connect(self.open_point_of_sale)
+        Button2.clicked.connect(self.open_sales)
         Button2.setFixedHeight(40)
         sidebar_layout.addWidget(Button2)
 
@@ -55,7 +65,8 @@ class pos_system(QMainWindow):
         Button3.setFixedHeight(40)
         sidebar_layout.addWidget(Button3)
 
-        dashboard_layout.addWidget(sidebar)
+        self.dashboard_layout.addWidget(sidebar)
+        self.dashboard_layout.addWidget(self.mdi_area)
 
 # ===================================================================
                 
@@ -103,15 +114,16 @@ class pos_system(QMainWindow):
         main_layout.addLayout(bottom_row)
 
 
-        dashboard_layout.addWidget(main_dashboard)
+        self.dashboard_layout.addWidget(main_dashboard)
+
 
     def open_product_list(self):
         self.product_window = ProductListWindow()
         self.product_window.show()
 
-    def open_point_of_sale(self):
-        self.pos_window = PointOfSaleWindow()
-        self.pos_window.show()
+    # def open_point_of_sale(self):
+    #     self.pos_window = PointOfSaleWindow()
+    #     self.pos_window.show()
 
     def open_sales_report(self):
         self.sales_report_window = SalesReportWindow()
@@ -120,6 +132,15 @@ class pos_system(QMainWindow):
     def open_inventory(self):
         self.inventory_window = InventoryWindow()
         self.inventory_window.show()
+    
+    
+    def open_sales(self):
+        sub = QMdiSubWindow()
+        sub.setWindowTitle("Sales")
+        sub.setWidget(SalesWindow())
+        sub.setMinimumSize(600, 400)
+        self.mdi_area.addSubWindow(sub)
+        sub.show()
 
 
 class ProductListWindow(QWidget):
@@ -541,6 +562,127 @@ class AddProductForm(QWidget):
 
         QMessageBox.information(self, "Success", "Product saved successfully!")
         self.close()
+
+
+class SalesWindow(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.db = database()  # connect to DB
+        layout = QVBoxLayout()
+        self.setLayout(layout)
+
+        title = QLabel("Sales Entry")
+        title.setAlignment(Qt.AlignCenter)
+        title.setStyleSheet("font-size: 18px; font-weight: bold;")
+        layout.addWidget(title)
+
+        form_layout = QGridLayout()
+        self.customer_id_input = QLineEdit()
+        self.phone_input = QLineEdit()
+
+        form_layout.addWidget(QLabel("Customer ID:"), 0, 0)
+        form_layout.addWidget(self.customer_id_input, 0, 1)
+        form_layout.addWidget(QLabel("Phone No:"), 1, 0)
+        form_layout.addWidget(self.phone_input, 1, 1)
+
+        layout.addLayout(form_layout)
+
+        self.table = QTableWidget(5, 4)
+        self.table.setHorizontalHeaderLabels(["Product", "Quantity", "Price", "Total"])
+        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        layout.addWidget(self.table)
+
+        self.table.cellChanged.connect(self.handle_cell_change)
+
+        self.total_label = QLabel("Total: ₹0.00")
+        self.total_label.setAlignment(Qt.AlignRight)
+        layout.addWidget(self.total_label)
+
+        calculate_button = QPushButton("Calculate Total")
+        calculate_button.clicked.connect(self.calculate_total)
+        layout.addWidget(calculate_button, alignment=Qt.AlignRight)
+
+        submit_button = QPushButton("Submit Sale")
+        submit_button.clicked.connect(self.submit_sale)
+        layout.addWidget(submit_button, alignment=Qt.AlignRight)
+
+    def handle_cell_change(self, row, column):
+        if column == 0:  # Product Name changed
+            product_name_item = self.table.item(row, 0)
+            if product_name_item:
+                product_name = product_name_item.text()
+                product = self.db.get_product_by_name(product_name)
+                if product:
+                    product_id, price, quantity = product
+                    self.table.setItem(row, 2, QTableWidgetItem(f"{price:.2f}"))
+                    qty_item = self.table.item(row, 1)
+                    if qty_item and qty_item.text().isdigit():
+                        qty = int(qty_item.text())
+                        total = qty * price
+                        self.table.setItem(row, 3, QTableWidgetItem(f"{total:.2f}"))
+                else:
+                    QMessageBox.warning(self, "Product Not Found", f"No product found for '{product_name}'")
+
+        elif column == 1:  # Quantity changed
+            qty_item = self.table.item(row, 1)
+            price_item = self.table.item(row, 2)
+            if qty_item and price_item:
+                try:
+                    qty = float(qty_item.text())
+                    price = float(price_item.text())
+                    total = qty * price
+                    self.table.setItem(row, 3, QTableWidgetItem(f"{total:.2f}"))
+                except:
+                    pass
+
+    def calculate_total(self):
+        total = 0.0
+        for row in range(self.table.rowCount()):
+            try:
+                total_item = self.table.item(row, 3)
+                if total_item:
+                    total += float(total_item.text())
+            except:
+                continue
+        self.total_label.setText(f"Total: ₹{total:.2f}")
+
+    def submit_sale(self):
+        customer_id = self.customer_id_input.text().strip()
+        phone = self.phone_input.text().strip()
+        total_amount = 0.0
+        items = []
+
+        for row in range(self.table.rowCount()):
+            try:
+                name_item = self.table.item(row, 0)
+                qty_item = self.table.item(row, 1)
+                price_item = self.table.item(row, 2)
+
+                if name_item and qty_item and price_item:
+                    product = self.db.get_product_by_name(name_item.text())
+                    if not product:
+                        continue
+                    product_id, price_db, stock = product
+                    qty = int(qty_item.text())
+                    price = float(price_item.text())
+
+                    if qty > stock:
+                        QMessageBox.warning(self, "Stock Error", f"Not enough stock for {name_item.text()}")
+                        return
+
+                    items.append((product_id, qty, price))
+                    total_amount += qty * price
+            except:
+                continue
+
+        if not items:
+            QMessageBox.warning(self, "No Products", "No valid products added.")
+            return
+
+        self.db.save_sale(customer_id, phone, items, total_amount)
+        QMessageBox.information(self, "Success", "Sale submitted successfully.")
+        self.close()
+
         
         
 if __name__ == "__main__":
