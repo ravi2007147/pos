@@ -38,32 +38,39 @@ class pos_system(QMainWindow):
         sidebar = QFrame()
         sidebar.setFrameShape(QFrame.StyledPanel)
         sidebar.setFixedWidth(200)
-        sidebar_layout = QVBoxLayout()
-        sidebar.setLayout(sidebar_layout)
 
-        sidebar_label = QLabel("Dashboard")
-        sidebar_label.setAlignment(Qt.AlignCenter)
-        sidebar_label.setStyleSheet("font-weight: bold; font-size: 16px;")
-        sidebar_layout.addWidget(sidebar_label)
+        
+        sidebar_layout = QVBoxLayout()
+        sidebar_layout.setAlignment(Qt.AlignTop)
+        sidebar.setLayout(sidebar_layout)
+        sidebar_layout.setContentsMargins(10, 30, 10, 10)
+        sidebar_layout.setSpacing(15)
+
 
         Button = QPushButton("Dashboard")
-        Button.setFixedHeight(40)
+        Button.setFixedHeight(50)
+        Button.setStyleSheet("font-size: 14px; font-weight: bold;")
         sidebar_layout.addWidget(Button)
 
         Button1 = QPushButton("Product List")
+        Button1.setFixedHeight(50)
+        Button1.setStyleSheet("font-size: 14px; font-weight: bold;")
         Button1.clicked.connect(self.open_product_list)
-        Button1.setFixedHeight(40)
         sidebar_layout.addWidget(Button1)
 
         Button2 = QPushButton("Point of sale")
+        Button2.setFixedHeight(50)
+        Button2.setStyleSheet("font-size: 14px; font-weight: bold;")
         Button2.clicked.connect(self.open_sales)
-        Button2.setFixedHeight(40)
         sidebar_layout.addWidget(Button2)
 
         Button3 = QPushButton("Sales report")
+        Button3.setFixedHeight(50)
+        Button3.setStyleSheet("font-size: 14px; font-weight: bold;")
         Button3.clicked.connect(self.open_sales_report)
-        Button3.setFixedHeight(40)
         sidebar_layout.addWidget(Button3)
+
+
 
         self.dashboard_layout.addWidget(sidebar)
         self.dashboard_layout.addWidget(self.mdi_area)
@@ -73,25 +80,39 @@ class pos_system(QMainWindow):
         main_dashboard = QFrame()
         main_dashboard.setFrameShape(QFrame.StyledPanel)
         main_layout = QVBoxLayout()
+        main_layout.setAlignment(Qt.AlignTop)
         main_dashboard.setLayout(main_layout)
+        main_layout.setContentsMargins(20, 20, 20, 20)
+
+# Removed title QLabel
+
 
         
-        title = QLabel("Dashboard")
-        title.setAlignment(Qt.AlignCenter)
-        title.setStyleSheet("font-size: 24px; font-weight: bold;")
-        main_layout.addWidget(title)
+        # title = QLabel("Dashboard")
+        # title.setAlignment(Qt.AlignCenter)
+        # title.setStyleSheet("font-size: 24px; font-weight: bold;")
+        # main_layout.addWidget(title)
 
     
         top_row = QHBoxLayout()
         top_row.addStretch()
+        
+        button_style = """
+    QPushButton {
+        font-size: 16px;
+        font-weight: bold;
+    }
+""" 
 
         sales_box = QPushButton("Sales")
         sales_box.setFixedSize(200, 100)
         top_row.addWidget(sales_box)
         top_row.addSpacing(40)
+        sales_box.setStyleSheet(button_style)
 
         inventory_box = QPushButton("Inventory")
         inventory_box.clicked.connect(self.open_inventory)
+        inventory_box.setStyleSheet(button_style) 
         inventory_box.setFixedSize(200, 100)
         top_row.addWidget(inventory_box)
 
@@ -104,10 +125,12 @@ class pos_system(QMainWindow):
         top_products_btn = QPushButton("Top Products")
         top_products_btn.setFixedSize(200, 100)
         bottom_row.addWidget(top_products_btn)
+        top_products_btn.setStyleSheet(button_style)
         bottom_row.addSpacing(40)
 
         recent_sales_btn = QPushButton("Recent Sales")
         recent_sales_btn.setFixedSize(200, 100)
+        recent_sales_btn.setStyleSheet(button_style)
         bottom_row.addWidget(recent_sales_btn)
 
         bottom_row.addStretch()
@@ -135,7 +158,7 @@ class pos_system(QMainWindow):
     
     
     def open_sales(self):
-        sub = QMdiSubWindow()
+        sub = ConfirmCloseSubWindow()   
         sub.setWindowTitle("Sales")
         sub.setWidget(SalesWindow())
         sub.setMinimumSize(600, 400)
@@ -245,7 +268,7 @@ class SalesReportWindow(QWidget):
         sidebar.setStyleSheet("background-color: #f0f0f0;")
         sidebar_layout = QVBoxLayout()
         sidebar.setLayout(sidebar_layout)
-
+ 
         label = QLabel("Sales Report")
         label.setStyleSheet("font-weight: bold; font-size: 16px;")
         label.setAlignment(Qt.AlignCenter)
@@ -576,16 +599,7 @@ class SalesWindow(QWidget):
         title.setStyleSheet("font-size: 18px; font-weight: bold;")
         layout.addWidget(title)
 
-        form_layout = QGridLayout()
-        self.customer_id_input = QLineEdit()
-        self.phone_input = QLineEdit()
 
-        form_layout.addWidget(QLabel("Customer ID:"), 0, 0)
-        form_layout.addWidget(self.customer_id_input, 0, 1)
-        form_layout.addWidget(QLabel("Phone No:"), 1, 0)
-        form_layout.addWidget(self.phone_input, 1, 1)
-
-        layout.addLayout(form_layout)
 
         self.table = QTableWidget(5, 4)
         self.table.setHorizontalHeaderLabels(["Product", "Quantity", "Price", "Total"])
@@ -598,9 +612,22 @@ class SalesWindow(QWidget):
         self.total_label.setAlignment(Qt.AlignRight)
         layout.addWidget(self.total_label)
 
-        calculate_button = QPushButton("Calculate Total")
-        calculate_button.clicked.connect(self.calculate_total)
-        layout.addWidget(calculate_button, alignment=Qt.AlignRight)
+        layout.addWidget(self.total_label)
+
+        # calculate_button = QPushButton("Calculate Total")
+        # calculate_button.clicked.connect(self.calculate_total)
+        # layout.addWidget(calculate_button, alignment=Qt.AlignRight)
+
+        
+        phone_layout = QHBoxLayout()
+        phone_label = QLabel("Phone No:")
+        phone_layout.addWidget(phone_label)
+        self.phone_input = QLineEdit()
+        self.phone_input.setPlaceholderText("Enter Phone Number")
+        phone_layout.addWidget(self.phone_input)
+        phone_layout.addStretch()
+        layout.addLayout(phone_layout)
+
 
         submit_button = QPushButton("Submit Sale")
         submit_button.clicked.connect(self.submit_sale)
@@ -620,9 +647,6 @@ class SalesWindow(QWidget):
                         qty = int(qty_item.text())
                         total = qty * price
                         self.table.setItem(row, 3, QTableWidgetItem(f"{total:.2f}"))
-                else:
-                    QMessageBox.warning(self, "Product Not Found", f"No product found for '{product_name}'")
-
         elif column == 1:  # Quantity changed
             qty_item = self.table.item(row, 1)
             price_item = self.table.item(row, 2)
@@ -635,7 +659,10 @@ class SalesWindow(QWidget):
                 except:
                     pass
 
-    def calculate_total(self):
+        
+        self.update_total()
+
+    def update_total(self):
         total = 0.0
         for row in range(self.table.rowCount()):
             try:
@@ -647,7 +674,7 @@ class SalesWindow(QWidget):
         self.total_label.setText(f"Total: ₹{total:.2f}")
 
     def submit_sale(self):
-        customer_id = self.customer_id_input.text().strip()
+        customer_id = "NA"
         phone = self.phone_input.text().strip()
         total_amount = 0.0
         items = []
@@ -683,6 +710,20 @@ class SalesWindow(QWidget):
         QMessageBox.information(self, "Success", "Sale submitted successfully.")
         self.close()
 
+from PyQt5.QtWidgets import QMdiSubWindow, QMessageBox
+
+class ConfirmCloseSubWindow(QMdiSubWindow):
+    def closeEvent(self, event):
+        reply = QMessageBox.question(
+            self,
+            "Confirm Close",
+            "Are you sure you want to close this window?",
+            QMessageBox.Yes | QMessageBox.No
+        )
+        if reply == QMessageBox.Yes:
+            event.accept()
+        else:
+            event.ignore()
         
         
 if __name__ == "__main__":
