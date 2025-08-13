@@ -127,4 +127,11 @@ class database():
         conn.commit()
         conn.close()
 
-    
+    def get_product_name_by_id(self, product_id):
+        conn = self.get_connection()
+        c = conn.cursor()
+        c.execute("SELECT name FROM products WHERE id = ?", (product_id,))
+        result = c.fetchone()
+        conn.close()
+        return result[0] if result else None
+
