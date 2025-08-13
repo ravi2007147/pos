@@ -13,11 +13,13 @@ class database():
         conn = self.get_connection()
         c = conn.cursor()
         c.execute(""" 
-            CREATE TABLE IF NOT EXISTS category (
-                category_name TEXT NOT NULL,
-                parent_id INTEGER DEFAULT 0,
-                FOREIGN KEY (parent_id) REFERENCES category(category_id))
-        """)
+    CREATE TABLE IF NOT EXISTS category (
+        category_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        category_name TEXT NOT NULL,
+        parent_id INTEGER DEFAULT 0
+    )
+""")
+
         
         c.execute("""
             CREATE TABLE IF NOT EXISTS product (

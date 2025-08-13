@@ -1,16 +1,17 @@
 import sys 
-from PyQt5.QtWidgets import(QApplication, QFrame,QLabel, QWidget, QMainWindow, QVBoxLayout, QHBoxLayout,
-    QPushButton,QLineEdit)
+
 from PyQt5.QtWidgets import (
     QWidget, QLabel, QLineEdit, QTextEdit, QComboBox, QSpinBox, QDoubleSpinBox,
-    QPushButton, QVBoxLayout, QHBoxLayout, QGridLayout, QFileDialog, QMessageBox,QHeaderView
+    QPushButton, QVBoxLayout, QHBoxLayout, QGridLayout, QFileDialog, QMessageBox,QHeaderView,QMdiArea,QMdiSubWindow
+    ,QCompleter, QTableWidget, QTableWidgetItem,QApplication, QFrame,QLabel, QWidget, QMainWindow, QVBoxLayout, 
+    QHBoxLayout, QPushButton,QLineEdit,QMdiSubWindow, QMessageBox
 )
 from PyQt5.QtCore import Qt
 import datetime
-from PyQt5.QtWidgets import QTableWidget, QTableWidgetItem
+
 
 from posdatabase import database
-from PyQt5.QtWidgets import QMdiArea,QMdiSubWindow
+
 
 class pos_system(QMainWindow):
     def __init__(self):
@@ -113,7 +114,7 @@ class pos_system(QMainWindow):
         inventory_box = QPushButton("Inventory")
         inventory_box.clicked.connect(self.open_inventory)
         inventory_box.setStyleSheet(button_style) 
-        inventory_box.setFixedSize(200, 100)
+        inventory_box.setFixedSize (200,100)
         top_row.addWidget(inventory_box)
 
         top_row.addStretch()
@@ -155,6 +156,7 @@ class pos_system(QMainWindow):
     def open_inventory(self):
         self.inventory_window = InventoryWindow()
         self.inventory_window.show()
+        
     
     
     def open_sales(self):
@@ -313,7 +315,7 @@ class SalesReportWindow(QWidget):
 
         content_layout.addLayout(date_layout)
 
-        # Chart & Summary Placeholder
+       
         chart_box = QLabel("\n\n[ Sales Chart Will Be Shown Here ]\n")
         chart_box.setStyleSheet("border: 1px solid gray; color: gray;")
         chart_box.setAlignment(Qt.AlignCenter)
@@ -590,7 +592,7 @@ class AddProductForm(QWidget):
 class SalesWindow(QWidget):
     def __init__(self):
         super().__init__()
-        self.db = database()  # connect to DB
+        self.db = database()
         layout = QVBoxLayout()
         self.setLayout(layout)
 
@@ -599,26 +601,30 @@ class SalesWindow(QWidget):
         title.setStyleSheet("font-size: 18px; font-weight: bold;")
         layout.addWidget(title)
 
-
-
-        self.table = QTableWidget(5, 4)
+        self.table = QTableWidget(0, 4)  
         self.table.setHorizontalHeaderLabels(["Product", "Quantity", "Price", "Total"])
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         layout.addWidget(self.table)
 
         self.table.cellChanged.connect(self.handle_cell_change)
 
+        
+        self.product_names = [p[1] for p in self.db.get_inventory()]
+        self.completer = QCompleter(self.product_names)
+        self.completer.setCaseSensitivity(Qt.CaseInsensitive)
+
+        
+        self.add_product_row()
+
+        
+        add_row_btn = QPushButton("Add Product Row")
+        add_row_btn.clicked.connect(self.add_product_row)
+        layout.addWidget(add_row_btn)
+
         self.total_label = QLabel("Total: ₹0.00")
         self.total_label.setAlignment(Qt.AlignRight)
         layout.addWidget(self.total_label)
 
-        layout.addWidget(self.total_label)
-
-        # calculate_button = QPushButton("Calculate Total")
-        # calculate_button.clicked.connect(self.calculate_total)
-        # layout.addWidget(calculate_button, alignment=Qt.AlignRight)
-
-        
         phone_layout = QHBoxLayout()
         phone_label = QLabel("Phone No:")
         phone_layout.addWidget(phone_label)
@@ -628,13 +634,30 @@ class SalesWindow(QWidget):
         phone_layout.addStretch()
         layout.addLayout(phone_layout)
 
-
         submit_button = QPushButton("Submit Sale")
         submit_button.clicked.connect(self.submit_sale)
         layout.addWidget(submit_button, alignment=Qt.AlignRight)
 
+    def add_product_row(self):
+        row = self.table.rowCount()
+        self.table.insertRow(row)
+
+        product_input = QLineEdit()
+        product_input.setCompleter(self.completer)
+        product_input.textChanged.connect(lambda text, r=row: self.product_name_changed(text, r))
+        self.table.setCellWidget(row, 0, product_input)
+
+    def product_name_changed(self, text, row):
+        if text:
+            product = self.db.get_product_by_name(text)
+            if product:
+                product_id, price, quantity = product
+                self.table.setItem(row, 2, QTableWidgetItem(f"{price:.2f}"))
+                self.update_total()
+
+
     def handle_cell_change(self, row, column):
-        if column == 0:  # Product Name changed
+        if column == 0:   
             product_name_item = self.table.item(row, 0)
             if product_name_item:
                 product_name = product_name_item.text()
@@ -647,7 +670,7 @@ class SalesWindow(QWidget):
                         qty = int(qty_item.text())
                         total = qty * price
                         self.table.setItem(row, 3, QTableWidgetItem(f"{total:.2f}"))
-        elif column == 1:  # Quantity changed
+        elif column == 1:  
             qty_item = self.table.item(row, 1)
             price_item = self.table.item(row, 2)
             if qty_item and price_item:
@@ -710,7 +733,7 @@ class SalesWindow(QWidget):
         QMessageBox.information(self, "Success", "Sale submitted successfully.")
         self.close()
 
-from PyQt5.QtWidgets import QMdiSubWindow, QMessageBox
+
 
 class ConfirmCloseSubWindow(QMdiSubWindow):
     def closeEvent(self, event):
