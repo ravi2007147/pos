@@ -5,10 +5,12 @@ from PyQt5.QtWidgets import (
     QWidget, QLabel, QLineEdit, QTextEdit, QComboBox, QSpinBox, QDoubleSpinBox,
     QPushButton, QVBoxLayout, QHBoxLayout, QGridLayout, QFileDialog, QMessageBox,QHeaderView,QMdiArea,QMdiSubWindow
     ,QCompleter, QTableWidget, QTableWidgetItem,QApplication, QFrame,QLabel, QWidget, QMainWindow, QVBoxLayout, 
-    QHBoxLayout, QPushButton,QLineEdit,QMdiSubWindow, QMessageBox,QCheckBox)
+    QHBoxLayout, QPushButton,QLineEdit,QMdiSubWindow, QMessageBox,QCheckBox,QInputDialog)
 
 from posdatabase import database
-
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+        
 SWITCH_STYLE = """
     QCheckBox::indicator {
         width: 40px;
@@ -221,6 +223,15 @@ class pos_system(QMainWindow):
         Button3.clicked.connect(self.open_sales_report)
         sidebar_layout.addWidget(Button3)
 
+        self.shop_name = "My Shop"   # default shop name
+
+        shop_btn = QPushButton("Set Shop Name")
+        shop_btn.setFixedHeight(50)
+        shop_btn.setStyleSheet("font-size: 14px; font-weight: bold;")
+        shop_btn.clicked.connect(self.set_shop_name)
+        sidebar_layout.addWidget(shop_btn)
+
+
         self.dashboard_layout.addWidget(sidebar)
         self.dashboard_layout.addWidget(self.mdi_area)
 
@@ -333,6 +344,12 @@ class pos_system(QMainWindow):
         else:
             QApplication.instance().setStyleSheet(DARK_THEME)
             self.current_theme = "dark"
+
+    def set_shop_name(self):
+        text, ok = QInputDialog.getText(self, "Shop Name", "Enter your shop name:", QLineEdit.Normal, self.shop_name)
+        if ok and text.strip():
+            self.shop_name = text.strip()
+            QMessageBox.information(self, "Shop Name Set", f"Shop name updated to: {self.shop_name}")
 
 class ProductListWindow(QWidget):
     def __init__(self):
@@ -837,13 +854,22 @@ class SalesWindow(QWidget):
             return
 
         # save to database
-        self.db.save_sale(customer_id=None, phone=phone, items=items, total=total_amount)
+        sale_id = self.db.save_sale(customer_id=None, phone=phone, items=items, total=total_amount)
 
-        # show receipt
-        self.receipt_window = ReceiptWindow(phone, [(self.db.get_product_name_by_id(pid), qty, price) for pid, qty, price in items], total_amount)
+        # show receipt window
+        # Pass the shop name from parent window
+        main_window = self.parentWidget().window()  # gets pos_system
+        shop_name = getattr(main_window, "shop_name", "My Shop")
+
+        self.receipt_window = ReceiptWindow(
+            sale_id, phone,
+            [(self.db.get_product_name_by_id(pid), qty, price) for pid, qty, price in items],
+            total_amount, shop_name
+        )
         self.receipt_window.show()
         self.close()
 
+        
 
 class ConfirmCloseSubWindow(QMdiSubWindow):
     def closeEvent(self, event):
@@ -859,32 +885,48 @@ class ConfirmCloseSubWindow(QMdiSubWindow):
             event.ignore()
         
 class ReceiptWindow(QWidget):
-    def __init__(self, phone, items, total_amount):
+    def __init__(self, sale_id, phone, items, total_amount, shop_name="My Shop"):
         super().__init__()
-        self.setWindowTitle("Sale Receipt")
-        self.resize(400, 500)
+        self.sale_id = sale_id
+        self.phone = phone
+        self.items = items
+        self.total_amount = total_amount
+        self.shop_name = shop_name
+
 
         layout = QVBoxLayout()
         self.setLayout(layout)
 
+        shop_label = QLabel(self.shop_name)
+        shop_label.setAlignment(Qt.AlignCenter)
+        shop_label.setStyleSheet("font-size: 20px; font-weight: bold;")
+        layout.addWidget(shop_label)
+
+
+        # Title
         title = QLabel("Receipt")
         title.setAlignment(Qt.AlignCenter)
         title.setStyleSheet("font-size: 18px; font-weight: bold;")
         layout.addWidget(title)
 
+        # Invoice No
+        invoice_label = QLabel(f"Invoice No: {self.sale_id}")
+        layout.addWidget(invoice_label)
+
+        # Date + Phone
         date_label = QLabel(f"Date: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         layout.addWidget(date_label)
 
-        phone_label = QLabel(f"Customer Phone: {phone}")
+        phone_label = QLabel(f"Customer Phone: {self.phone}")
         layout.addWidget(phone_label)
 
+        # Items
         layout.addWidget(QLabel("Items:"))
-
-        table = QTableWidget(len(items), 4)
+        table = QTableWidget(len(self.items), 4)
         table.setHorizontalHeaderLabels(["Product", "Qty", "Price", "Total"])
         table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
 
-        for row, (name, qty, price) in enumerate(items):
+        for row, (name, qty, price) in enumerate(self.items):
             table.setItem(row, 0, QTableWidgetItem(name))
             table.setItem(row, 1, QTableWidgetItem(str(qty)))
             table.setItem(row, 2, QTableWidgetItem(f"{price:.2f}"))
@@ -892,10 +934,49 @@ class ReceiptWindow(QWidget):
 
         layout.addWidget(table)
 
-        total_label = QLabel(f"Grand Total: ₹{total_amount:.2f}")
+        # Total
+        total_label = QLabel(f"Grand Total: ₹{self.total_amount:.2f}")
         total_label.setAlignment(Qt.AlignRight)
         total_label.setStyleSheet("font-size: 14px; font-weight: bold;")
         layout.addWidget(total_label)
+
+        # Save PDF Button
+        save_pdf_btn = QPushButton("Save as PDF")
+        save_pdf_btn.clicked.connect(self.save_as_pdf)
+        layout.addWidget(save_pdf_btn, alignment=Qt.AlignCenter)
+
+    def save_as_pdf(self):
+        file_path, _ = QFileDialog.getSaveFileName(
+            self, "Save Receipt as PDF",
+            f"receipt_{self.sale_id}.pdf", "PDF Files (*.pdf)"
+        )
+        if not file_path:
+            return
+
+        c = canvas.Canvas(file_path, pagesize=letter)
+        c.setFont("Helvetica", 12)
+
+        c.drawString(200, 750, "Sale Receipt")
+        c.drawString(50, 730, f"Invoice No: {self.sale_id}")
+        c.drawString(50, 715, f"Date: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        c.drawString(50, 700, f"Customer Phone: {self.phone}")
+
+        c.drawString(50, 670, "Items:")
+        y = 650
+        for name, qty, price in self.items:
+            c.drawString(50, y, f"{name} (x{qty}) - ₹{price:.2f} = ₹{qty*price:.2f}")
+            y -= 15
+
+        c.drawString(50, y - 20, f"Grand Total: ₹{self.total_amount:.2f}")
+        c.save()
+        QMessageBox.information(self, "Saved", f"Receipt saved as {file_path}")
+        c.setFont("Helvetica-Bold", 14)
+        c.drawString(200, 770, self.shop_name)
+
+        c.setFont("Helvetica", 12)
+        c.drawString(200, 750, "Sale Receipt")
+
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

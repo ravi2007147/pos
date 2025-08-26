@@ -134,7 +134,7 @@ class database():
 
         conn.commit()
         conn.close()
-
+        return sale_id
 
     def get_product_name_by_id(self, product_id):
         conn = self.get_connection()
